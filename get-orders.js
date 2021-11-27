@@ -2,7 +2,13 @@ const {
   default: WooCommerceRestApi,
 } = require("@woocommerce/woocommerce-rest-api");
 const fs = require("fs");
-const firstline = require("firstline");
+
+const api = new WooCommerceRestApi({
+  url: "https://api.feuerschutz.ch",
+  consumerKey: process.argv[2],
+  consumerSecret: process.argv[3],
+  version: "wc/v3",
+});
 
 const SEPERATOR = '"' + "," + '"';
 const FILENAME = "orders.csv";
@@ -43,13 +49,6 @@ const HEADERS = [
   "Produkt Menge",
   "Produkt Subtotal",
 ];
-
-const api = new WooCommerceRestApi({
-  url: "https://api.feuerschutz.ch",
-  consumerKey: process.argv[2],
-  consumerSecret: process.argv[3],
-  version: "wc/v3",
-});
 
 const generateOrderCsv = (orders) =>
   [].concat
@@ -116,7 +115,7 @@ const fetchOrders = async () => {
     lastRun = stats.mtime;
   }
 
-  let totalOrders = 1; //just so we fetch at least ones
+  let totalOrders = 1; //just so we fetch at least once
   let orders = 0;
   let page = 1;
   let maxProducts = 0;

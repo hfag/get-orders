@@ -2,6 +2,7 @@ const {
   default: WooCommerceRestApi,
 } = require("@woocommerce/woocommerce-rest-api");
 const fs = require("fs");
+const { exit } = require("process");
 
 const api = new WooCommerceRestApi({
   url: "https://api.feuerschutz.ch",
@@ -60,7 +61,7 @@ const generateOrderCsv = (orders) =>
 const generateHeader = () => '"' + HEADERS.join(SEPERATOR) + '"';
 
 const fetchOrders = async () => {
-  const offset = 0;
+  let offset = 0;
   if (fs.existsSync(`./${FILENAME_ORDER_COUNT}`)) {
     offset = parseInt(fs.readFileSync(`./${FILENAME_ORDER_COUNT}`));
   }
@@ -73,13 +74,16 @@ const fetchOrders = async () => {
     fs.writeFileSync(`./${FILENAME}`, header, { encoding: "utf8" });
   }
 
-  let totalOrders = 1; //just so we fetch at least once
-  let orders = 0;
-  let page = 1;
-  let maxProducts = 0;
+  let totalOrders = -1;
+  let orders = offset;
 
-  while (orders < totalOrders) {
-    const params = { per_page: 100, page, orderby: "id", order: "asc", offset };
+  while (totalOrders < 0 || orders < totalOrders) {
+    const params = {
+      per_page: 100,
+      offset: orders,
+      orderby: "date",
+      order: "asc",
+    };
 
     const response = await api.get("orders", params);
     totalOrders = response.headers["x-wp-total"];
@@ -87,22 +91,21 @@ const fetchOrders = async () => {
       encoding: "utf8",
     });
     orders += response.data.length;
-    page++;
-
-    maxProducts = response.data.reduce(
-      (max, order) =>
-        order.line_items.length > max ? order.line_items.length : max,
-      maxProducts
-    );
 
     console.log(
-      `Fetched ${orders} orders of ${totalOrders} with offset ${offset}`
+      `Fetched ${orders - offset} new orders of ${
+        totalOrders - offset
+      } with offset ${offset}`
     );
   }
 
-  fs.writeFileSync(`./${FILENAME_ORDER_COUNT}`, max(0, totalOrders), {
-    encoding: "utf8",
-  });
+  fs.writeFileSync(
+    `./${FILENAME_ORDER_COUNT}`,
+    Math.max(0, totalOrders).toString(),
+    {
+      encoding: "utf8",
+    }
+  );
 };
 
 fetchOrders();
